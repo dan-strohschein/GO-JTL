@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"jtl/utilities"
 	"regexp"
 	"strings"
 )
@@ -125,7 +126,7 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 				//				println("Opening up an object")
 
 				// Find the next instance of the object closing tag
-				var objectEndIndex, err = CharIndexFrom(json, '}', i)
+				var objectEndIndex, err = utilities.CharIndexFrom(json, '}', i)
 
 				if err != nil {
 					panic(err)
@@ -192,7 +193,7 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 			//			println("Opening an array")
 			currentToken = OpenArray
 
-			var arrayEndIndex, err = CharIndexFrom(json, ']', i)
+			var arrayEndIndex, err = utilities.CharIndexFrom(json, ']', i)
 
 			if err != nil {
 				panic(err)
@@ -263,34 +264,6 @@ func CleanJSONString(json string) (string, error) {
 	return json, nil
 }
 
-func CharIndexFrom(s string, searchFor byte, startingPosition int) (int, error) {
-	var result = -1
-
-	if startingPosition > len(s) {
-		return -1, errors.New("the starting position must not be greater than the length of the source string")
-	}
-
-	if startingPosition < 0 {
-		//throw an error, this is also bad
-		return -1, errors.New("the starting Position must be greater than 0")
-	}
-
-	if len(s) <= 0 {
-		//throw an error, or just return?
-		return -1, errors.New("the Source String must have a value with a length greater than 0")
-	}
-
-	for i := startingPosition; i < len(s); i++ {
-		var char = s[i]
-		if char == searchFor {
-			result = i
-			break
-		}
-	}
-
-	return result, nil
-}
-
 func Unmarshall(tree JSONTreeNode) (string, error) {
 	var result strings.Builder
 
@@ -341,13 +314,13 @@ func (kvp KeyValuePair) ConvertString() (string, error) {
 		errHandler = err
 	case Array:
 		//For now, just stuff the value back into a string
-		result.WriteString(fmt.Sprintf(" [%s]", kvp.Value))
+		result.WriteString(fmt.Sprintf("[%s]", kvp.Value))
 	case String:
-		result.WriteString(fmt.Sprintf(" \"%s\"", kvp.Value))
+		result.WriteString(fmt.Sprintf("\"%s\"", kvp.Value))
 	case Bool:
 		fallthrough
 	case Number:
-		result.WriteString(fmt.Sprintf(" %s", kvp.Value))
+		result.WriteString(fmt.Sprintf("%s", kvp.Value))
 	}
 
 	return result.String(), errHandler

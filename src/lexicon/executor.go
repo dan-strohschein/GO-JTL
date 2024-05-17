@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	jsonmarshaller "jtl/json-marshaller"
+	"jtl/utilities"
 	"strconv"
 	"strings"
 )
@@ -22,25 +23,8 @@ func ParseQuery(query string, tree jsonmarshaller.JSONTreeNode) (string, error) 
 				return "", errors.New("there must be an operand or command after the FIND keyword ")
 			}
 
-			var operandWord = queryParts[i+1]
+			//var operandWord = queryParts[i+1]
 
-			switch operandWord[0] {
-			case '[':
-				// array. Recurse because arrays can hold the same types recursively
-			case '{':
-				// object
-			case '"':
-				//string
-			case 't':
-				if operandWord == "true" {
-					//bool
-				}
-			case 'f':
-				if operandWord == "false" {
-					//bool
-				}
-			default: // numbers
-			}
 		case SEEK:
 
 		default:
@@ -72,7 +56,7 @@ func ExecuteCommand(cmd Command, operand string, json string) (string, error) {
 
 		//Execute the find with the operand
 		foundProp, errHandler = Find(objectTree, operand)
-		fmt.Printf("(ExecuteCommand) Found the following property : %s\n", foundProp.Property)
+		utilities.LogToConsole("(ExecuteCommand) Found the following property : %s\n", foundProp.Property)
 		if errHandler != nil {
 			fmt.Printf("ERROR! :: %s", errHandler)
 			//return "", errHandler
@@ -84,7 +68,7 @@ func ExecuteCommand(cmd Command, operand string, json string) (string, error) {
 			fmt.Printf("ERROR! :: %s", errHandler)
 		}
 
-		fmt.Printf("(ExecuteCommand) transformed into json string : %s\n", jsonString)
+		utilities.LogToConsole("(ExecuteCommand) transformed into json string : %s\n", jsonString)
 		//var operandWord = operand[0]
 
 		// switch operandWord {
@@ -127,7 +111,7 @@ func Find(objectTree jsonmarshaller.JSONTreeNode, operand string) (jsonmarshalle
 	//Paths have to have a dot in them, and should always start with a dot
 	if isPath(operand) {
 		result, err = GetPropertiesFromTreeWithPath(objectTree, operand)
-		fmt.Printf("(Find) Found the following property : %s\n", result.Property)
+		utilities.LogToConsole("(Find) Found the following property : %s\n", result.Property)
 	} else {
 		errMessage = "The first character of a path must be the root, which is noted as a dot. Please put a dot in front of the path."
 		return result, fmt.Errorf("%s", errMessage)
@@ -140,6 +124,7 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 	var result jsonmarshaller.KeyValuePair
 	var isArray bool = false
 	var searchingForIndex int
+	var searchingForProperty string
 	var err error
 	//remove the leading dot
 	var currentPath string
@@ -150,6 +135,7 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 	}
 
 	var pathSections = strings.Split(currentPath, ".")
+	searchingForProperty = pathSections[0]
 
 	if strings.Contains(pathSections[0], "[") {
 		//The path for the current property is an array. The value in the array blocks is the INDEX of the array.
@@ -157,6 +143,14 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 		var leftBlockIndex = strings.Index(pathSections[0], "[")
 		var searchingForIndexString = string(pathSections[0][leftBlockIndex+1])
 		searchingForIndex, err = strconv.Atoi(searchingForIndexString)
+		//var rightBlockIndex, err = jsonmarshaller.CharIndexFrom(searchingForProperty, ']', leftBlockIndex)
+
+		if err != nil {
+			//TODO This means it probably can't find the ] character. We should try to catch this in a validation step before hand
+			panic(err)
+		}
+
+		searchingForProperty = string(pathSections[0][:leftBlockIndex])
 
 		if err != nil {
 			return result, err
@@ -165,8 +159,8 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 
 	//Check the JSONTreeNode for the property in the current path
 	for _, prop := range tree.Properties {
-		fmt.Printf("(GetPropertiesFromTreeWithPath) Looking for %s in object property %s \n", pathSections[0], prop.Property)
-		if strings.EqualFold(prop.Property, pathSections[0]) {
+		utilities.LogToConsole("(GetPropertiesFromTreeWithPath) Looking for %s in object property %s \n", searchingForProperty, prop.Property)
+		if strings.EqualFold(prop.Property, searchingForProperty) {
 			//Found it! return the keyValuePair
 			result = prop
 
@@ -189,7 +183,7 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 						if strings.Contains(elements[searchingForIndex], "\"") {
 							kvp.Value = fmt.Sprintf("\"%s\"", elements[searchingForIndex])
 						} else {
-							kvp.Value = fmt.Sprintf("%s", elements[searchingForIndex])
+							kvp.Value = elements[searchingForIndex]
 						}
 					}
 				}

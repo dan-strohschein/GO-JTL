@@ -77,14 +77,14 @@ func TestFindCommandWithNestedPath() bool {
 
 func TestFindCommandWithNestedPathAndArrayIndex() bool {
 	println("Testing TestFindCommandWithNestedPathANDArrayIndex....")
-	var expected = "{}"
+	var expected = "\"SomeArray\" : 6"
 	var jsonString = "{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnotherStringType\" : \"Testing\" }"
 	var actual, _ = lexicon.ExecuteCommand(lexicon.FIND, ".someObject.SomeArray[2]", jsonString)
 
 	if len(actual) <= 0 {
 		println("Test FAILED!")
 	}
-
+	fmt.Printf("expected %s \n", expected)
 	fmt.Printf("actually got %v \n", actual)
 	return actual == expected
 }
