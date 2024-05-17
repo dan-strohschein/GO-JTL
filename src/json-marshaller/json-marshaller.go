@@ -1,6 +1,8 @@
 package jsonmarshaller
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -120,7 +122,7 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 
 			if currentToken == Colon {
 				currentToken = OpenObject
-				println("Opening up an object")
+				//				println("Opening up an object")
 
 				// Find the next instance of the object closing tag
 				var objectEndIndex, err = CharIndexFrom(json, '}', i)
@@ -148,7 +150,7 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 			}
 
 		case '}':
-			println("Closing object")
+			//			println("Closing object")
 			if currentToken == Colon {
 				NewKeyValuePair.Jtype = DetermineJSonType(currentValue)
 			}
@@ -161,14 +163,14 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 			//Either a property name or a string value
 			if currentToken == OpenObject {
 				currentToken = OpenProperty
-				println("Opening up a Property")
+				//				println("Opening up a Property")
 			} else if currentToken == Comma {
 				currentToken = OpenProperty
-				println("Opening up a Property after comma")
+				//				println("Opening up a Property after comma")
 				currentValue = ""
 			} else if currentToken == OpenProperty {
 				//Set the property name on the objectnode
-				println("Closing a property")
+				//				println("Closing a property")
 				currentToken = CloseProperty
 				NewKeyValuePair.Property = currentValue
 				currentValue = ""
@@ -176,18 +178,18 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 				// This is an array of strings, so we don't do anything here
 			} else if currentToken == Colon {
 				currentToken = OpenValue
-				println("OPening a string value")
+				//				println("OPening a string value")
 
 			} else if currentToken == OpenValue {
 				//Store the value in the objectNode
-				println("Closing a string value")
+				//				println("Closing a string value")
 				currentToken = CloseValue
 				NewKeyValuePair.Value = currentValue
 				NewKeyValuePair.Jtype = String
 			}
 		case '[':
 			//an array starts here
-			println("Opening an array")
+			//			println("Opening an array")
 			currentToken = OpenArray
 
 			var arrayEndIndex, err = CharIndexFrom(json, ']', i)
@@ -202,14 +204,14 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 			i = arrayEndIndex
 			currentToken = CloseArray
 		case ']':
-			println("Closing an array")
+			//			println("Closing an array")
 			currentToken = CloseArray
 		case ':':
 			// The end of a property
-			println("Found colon")
+			//			println("Found colon")
 			currentToken = Colon
 		case ',':
-			println("Found comma")
+			//			println("Found comma")
 
 			if currentToken == Colon {
 				NewKeyValuePair.Value = currentValue
@@ -225,9 +227,9 @@ func MarshallJSON(inputJSON string) JSONTreeNode {
 		}
 	}
 
-	for j := 0; j < len(properties); j++ {
-		fmt.Printf("%s : %s \n", properties[j].Property, properties[j].Value)
-	}
+	// for j := 0; j < len(properties); j++ {
+	// 	fmt.Printf("%s : %s \n", properties[j].Property, properties[j].Value)
+	// }
 	rootNode.Properties = properties
 
 	return rootNode
@@ -287,4 +289,105 @@ func CharIndexFrom(s string, searchFor byte, startingPosition int) (int, error) 
 	}
 
 	return result, nil
+}
+
+func Unmarshall(tree JSONTreeNode) (string, error) {
+	var result strings.Builder
+
+	objString, err := ConvertPropertiesToString(tree)
+
+	if err != nil {
+		panic(err)
+	}
+	result.WriteString("{")
+	result.WriteString(objString)
+	result.WriteString("}")
+
+	return result.String(), nil
+}
+
+func ConvertPropertiesToString(tree JSONTreeNode) (string, error) {
+	var result strings.Builder
+	var errHandler error
+
+	for index, prop := range tree.Properties {
+
+		propString, err := prop.ConvertString()
+		result.WriteString(propString)
+		errHandler = err
+
+		if len(tree.Properties) > 1 && index < len(tree.Properties)-1 {
+			result.WriteString(", ")
+		}
+	}
+
+	return result.String(), errHandler
+}
+
+func (kvp KeyValuePair) ConvertString() (string, error) {
+	var result strings.Builder
+	var errHandler error
+
+	result.WriteString(fmt.Sprintf("\"%s\" : ", kvp.Property))
+
+	switch kvp.Jtype {
+	case Object:
+		//Recurse!!
+
+		objString, err := ConvertPropertiesToString(kvp.Value.(JSONTreeNode))
+		result.WriteString("{")
+		result.WriteString(objString)
+		result.WriteString("}")
+		errHandler = err
+	case Array:
+		//For now, just stuff the value back into a string
+		result.WriteString(fmt.Sprintf(" [%s]", kvp.Value))
+	case String:
+		result.WriteString(fmt.Sprintf(" \"%s\"", kvp.Value))
+	case Bool:
+		fallthrough
+	case Number:
+		result.WriteString(fmt.Sprintf(" %s", kvp.Value))
+	}
+
+	return result.String(), errHandler
+}
+
+// Just a bell and whistle type of thing. I don't think this will be used much.
+func (kvp KeyValuePair) PrettyString() (string, error) {
+
+	jsonString, err := kvp.ConvertString()
+	var retValue bytes.Buffer
+	json.Indent(&retValue, []byte(jsonString), "", "	")
+
+	return retValue.String(), err
+}
+
+func ConvertString(kvp KeyValuePair) (string, error) {
+	var result strings.Builder
+	var errHandler error
+
+	result.WriteString(fmt.Sprintf("\"%s\" : ", kvp.Property))
+
+	switch kvp.Jtype {
+	case Object:
+		//Recurse!!
+
+		objString, err := ConvertPropertiesToString(kvp.Value.(JSONTreeNode))
+		result.WriteString("{")
+		result.WriteString(objString)
+		result.WriteString("}")
+		errHandler = err
+	case Array:
+		//For now, just stuff the value back into a string
+		result.WriteString(fmt.Sprintf(" [%s]", kvp.Value))
+	case String:
+		result.WriteString(fmt.Sprintf(" \"%s\"", kvp.Value))
+	case Bool:
+		fallthrough
+	case Number:
+		result.WriteString(fmt.Sprintf(" %s", kvp.Value))
+	}
+
+	return result.String(), errHandler
 }
