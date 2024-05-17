@@ -4,74 +4,84 @@ import (
 	"fmt"
 	jsonmarshaller "jtl/json-marshaller"
 	"jtl/lexicon"
+	"strings"
 )
 
 func TestAll() {
-	TestIsLegitRootNode()
-	TestIsLegitRootNodeOnlyOpening()
-	TestIsLegitRootNodeOnlyClosing()
+	println(evalTestResult(TestIsLegitRootNode()))
+	println(evalTestResult(TestIsLegitRootNodeOnlyOpening()))
+	println(evalTestResult(TestIsLegitRootNodeOnlyClosing()))
 
-	TestMarhsallingJSON()
-	TestUnMarhsallingJSON()
+	println(evalTestResult(TestMarhsallingJSON()))
+	println(evalTestResult(TestUnMarhsallingJSON()))
 
-	TestFindCommand()
-	TestFindCommandWithNestedPath()
-	TestFindCommandWithNestedPathAndArrayIndex()
+	println(evalTestResult(TestFindCommand()))
+	println(evalTestResult(TestFindCommandWithNestedPath()))
+	println(evalTestResult(TestFindCommandWithNestedPathAndArrayIndex()))
 }
 
 func TestIsLegitRootNode() bool {
-	println("Testing IsLegitRootNode, expecting true...")
+	println("Testing IsLegitRootNode...")
 	var expected = true
 	var actual = jsonmarshaller.IsLegitJSONRoot("{}")
 
-	fmt.Printf("actually got %v \n", actual)
+	//fmt.Printf("actually got %v \n", actual)
 	return actual == expected
 }
 
 func TestIsLegitRootNodeOnlyOpening() bool {
-	println("Testing TestIsLegitRootNodeOnlyOpening, expecting false...")
-	var expected = true
+	println("Testing TestIsLegitRootNodeOnlyOpening...")
+	var expected = false
 	var actual = jsonmarshaller.IsLegitJSONRoot("{")
 
-	fmt.Printf("actually got %v \n", actual)
+	//fmt.Printf("actually got %v \n", actual)
 	return actual == expected
 }
 
 func TestIsLegitRootNodeOnlyClosing() bool {
-	println("Testing TestIsLegitRootNodeOnlyClosing, expecting false...")
-	var expected = true
+	println("Testing TestIsLegitRootNodeOnlyClosing...")
+	var expected = false
 	var actual = jsonmarshaller.IsLegitJSONRoot("}")
 
-	fmt.Printf("actually got %v \n", actual)
+	//fmt.Printf("actually got %v \n", actual)
 	return actual == expected
 }
 
 // Check the find command
 func TestFindCommand() bool {
 	println("Testing TestFindCommand....")
-	var expected = "{}"
+	var expected = "\"someObject\":{\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }"
 	var jsonString = "{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnotherStringType\" : \"Testing\" }"
-	var actual, _ = lexicon.ExecuteCommand(lexicon.FIND, ".someObject", jsonString)
+	var actual, err = lexicon.ExecuteCommand(lexicon.FIND, ".someObject", jsonString)
 
-	if len(actual) <= 0 {
-		println("Test FAILED!")
+	if err != nil {
+		fmt.Printf("ERROR :: %s", err)
+		return false
 	}
 
-	fmt.Printf("actually got %v \n", actual)
+	expected = strings.ReplaceAll(expected, " ", "")
+	actual = strings.ReplaceAll(actual, " ", "")
+
+	// fmt.Printf("expected %s \n", expected)
+	// fmt.Printf("actually %v \n", actual)
 	return actual == expected
 }
 
 func TestFindCommandWithNestedPath() bool {
 	println("Testing TestFindCommandWithNestedPath....")
-	var expected = "{}"
+	var expected = "\"SomeString\" : \"This is a string\""
 	var jsonString = "{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnotherStringType\" : \"Testing\" }"
-	var actual, _ = lexicon.ExecuteCommand(lexicon.FIND, ".someObject.SomeString", jsonString)
+	var actual, err = lexicon.ExecuteCommand(lexicon.FIND, ".someObject.SomeString", jsonString)
 
-	if len(actual) <= 0 {
-		println("Test FAILED!")
+	if err != nil {
+		fmt.Printf("ERROR :: %s", err)
+		return false
 	}
 
-	fmt.Printf("actually got %v \n", actual)
+	expected = strings.ReplaceAll(expected, " ", "")
+	actual = strings.ReplaceAll(actual, " ", "")
+
+	//fmt.Printf("actually got %v \n", actual)
 	return actual == expected
 }
 
@@ -79,45 +89,57 @@ func TestFindCommandWithNestedPathAndArrayIndex() bool {
 	println("Testing TestFindCommandWithNestedPathANDArrayIndex....")
 	var expected = "\"SomeArray\" : 6"
 	var jsonString = "{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnotherStringType\" : \"Testing\" }"
-	var actual, _ = lexicon.ExecuteCommand(lexicon.FIND, ".someObject.SomeArray[2]", jsonString)
+	var actual, err = lexicon.ExecuteCommand(lexicon.FIND, ".someObject.SomeArray[2]", jsonString)
 
-	if len(actual) <= 0 {
-		println("Test FAILED!")
+	if err != nil {
+		fmt.Printf("ERROR :: %s", err)
+		return false
 	}
-	fmt.Printf("expected %s \n", expected)
-	fmt.Printf("actually got %v \n", actual)
+
+	expected = strings.ReplaceAll(expected, " ", "")
+	actual = strings.ReplaceAll(actual, " ", "")
+
+	// fmt.Printf("expected %s \n", expected)
+	// fmt.Printf("actually %v \n", actual)
 	return actual == expected
 }
 
 func TestMarhsallingJSON() bool {
-	println("Testing Marshalling, expecting TRUE...")
-	//var expected = "{}"
-	//var _ = lexicon.ParseJSONObjectString2("{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnEmptyString\" : \"Testing\"  }")
+	println("Testing Marshalling...")
+
 	var obj = jsonmarshaller.MarshallJSON("{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnEmptyString\" : \"Testing\" }")
 
 	if len(obj.Properties) > 0 && obj.Properties[0].Property == "someObject" {
-		fmt.Printf("Test Passed!")
-
+		//fmt.Printf("Test Passed!\n")
+		return true
 	}
 
-	//fmt.Printf("actually got %v \n", actual)
-	return true //actual == expected
+	return false
 }
 
 func TestUnMarhsallingJSON() bool {
-	println("Testing Unmarshalling, expecting TRUE...")
-	//var expected = "{}"
+	println("Testing Unmarshalling...")
+
 	var jsonString = "{ \"someObject\" : {\"SomeArray\" : [8,7,6,5,3,0,9], \"SomeNumber\" : 1, \"SomeString\" : \"This is a string\", \"Aboolean\" : true }, \"AnEmptyString\" : \"Testing\" }"
 	var obj = jsonmarshaller.MarshallJSON(jsonString)
 	var objString, err = jsonmarshaller.Unmarshall(obj)
 
 	if err != nil {
 		fmt.Printf("There was an error! %s", err)
+		return false
 	}
 
-	fmt.Printf("M: %s \n\nU: %s \n", jsonString, objString)
-	return true //actual == expected
+	var expected = strings.ReplaceAll(jsonString, " ", "")
+	var actual = strings.ReplaceAll(objString, " ", "")
+
+	//fmt.Printf("E: %s \n\nA: %s \n", expected, actual)
+	return strings.EqualFold(actual, expected)
 }
 
-//"{ \"someProperty\" : {\"SOMETHING\" : [], \"ANOTHER THING\" : 1, \"dude\" : \"Wheres my car\" }, \"AnotherProp\" : \"\",  }"
-//{ "someObject" : {"SomeArray" : [], "SomeNumber" : 1, "SomeString" : "This is a string", "Aboolean" : true }
+func evalTestResult(rst bool) string {
+	if rst {
+		return "PASSED"
+	} else {
+		return "FAILED"
+	}
+}
