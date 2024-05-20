@@ -18,7 +18,7 @@ type QueryToken struct {
 // ------------------------------------ Command Enums --------------------------------------
 
 const (
-	FIND     = iota //When given a tree structure property name, returns the object of that property. A dot returns the whole root object
+	FIND     = iota //A dot separated path that follows an object tree. When given a tree structure property name, returns that property.
 	SEEK            // searches the entire object graph for the specified property name
 	REMOVE          //Deletes the entire property from the object tree
 	REPLACE         // Replaces any property value with another value

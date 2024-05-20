@@ -43,9 +43,9 @@ func ExecuteCommand(cmd Command, operand string, json string) (string, error) {
 	//We turn this string into an object
 	var objectTree = jsonmarshaller.MarshallJSON(json)
 
-	var errHandler error
+	var errHandler error = nil
 	var foundProp jsonmarshaller.KeyValuePair
-	var jsonString string
+	var jsonString string = ""
 
 	switch cmd {
 	case FIND:
@@ -57,15 +57,17 @@ func ExecuteCommand(cmd Command, operand string, json string) (string, error) {
 		//Execute the find with the operand
 		foundProp, errHandler = Find(objectTree, operand)
 		utilities.LogToConsole("(ExecuteCommand) Found the following property : %s\n", foundProp.Property)
+
 		if errHandler != nil {
-			fmt.Printf("ERROR! :: %s", errHandler)
-			//return "", errHandler
+			//fmt.Printf("ERROR! :: %s", errHandler)
+			return "", errHandler
 		}
 
-		jsonString, errHandler = foundProp.ConvertString()
-
-		if errHandler != nil {
-			fmt.Printf("ERROR! :: %s", errHandler)
+		if len(foundProp.Property) > 0 {
+			jsonString, errHandler = foundProp.ConvertString()
+			if errHandler != nil {
+				fmt.Printf("ERROR! :: %s", errHandler)
+			}
 		}
 
 		utilities.LogToConsole("(ExecuteCommand) transformed into json string : %s\n", jsonString)
@@ -128,6 +130,8 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 	var err error
 	//remove the leading dot
 	var currentPath string
+
+	//TODO REfactor this block into a function called ParsePath or something -------------
 	currentPath = path
 
 	if currentPath[0] == '.' {
@@ -141,9 +145,9 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 		//The path for the current property is an array. The value in the array blocks is the INDEX of the array.
 		isArray = true
 		var leftBlockIndex = strings.Index(pathSections[0], "[")
-		var searchingForIndexString = string(pathSections[0][leftBlockIndex+1])
+		var rightBlockIndex, err = utilities.CharIndexFrom(searchingForProperty, ']', leftBlockIndex)
+		var searchingForIndexString = string(pathSections[0][leftBlockIndex+1 : rightBlockIndex])
 		searchingForIndex, err = strconv.Atoi(searchingForIndexString)
-		//var rightBlockIndex, err = jsonmarshaller.CharIndexFrom(searchingForProperty, ']', leftBlockIndex)
 
 		if err != nil {
 			//TODO This means it probably can't find the ] character. We should try to catch this in a validation step before hand
@@ -156,6 +160,7 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 			return result, err
 		}
 	}
+	// DONE WITH refactor TODO Block ----------------------------------------------------------
 
 	//Check the JSONTreeNode for the property in the current path
 	for _, prop := range tree.Properties {
@@ -185,6 +190,10 @@ func GetPropertiesFromTreeWithPath(tree jsonmarshaller.JSONTreeNode, path string
 						} else {
 							kvp.Value = elements[searchingForIndex]
 						}
+					} else {
+						//The array index is not in the array. We should tell the user that it wasn't found
+						err = fmt.Errorf("the provided index '%d' for the array '%s' was not found", searchingForIndex, prop.Property)
+						return kvp, err
 					}
 				}
 				return kvp, err
